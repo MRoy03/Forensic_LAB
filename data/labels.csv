@@ -1,0 +1,6 @@
+filename,label,type
+img1.jpg,real,none
+img2.jpg,fake,copy_move
+img3.jpg,fake,splicing
+img4.jpg,fake,inpainting
+img5.jpg,fake,gan

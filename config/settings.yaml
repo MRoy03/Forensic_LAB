@@ -1,0 +1,84 @@
+app:
+  name: "ForensicAI Lab"
+  version: "0.1.0"
+  cors_allow_origins: ["*"]
+
+api:
+  base_url: "http://localhost:8000"
+
+inference:
+  runtime: "onnxruntime"
+  execution_provider: "CPUExecutionProvider"
+  image_size: [256, 256]
+  input_channels: 5 # RGB(3) + ELA(1) + FFT(1)
+  mask_threshold: 0.5
+  input_name: "input"
+  output_names: ["cls_logits", "manip_logits", "mask_logits", "feature_map"]
+
+models:
+  image_model_onnx_path: "models/image_model.onnx"
+  video_model_onnx_path: "models/video_model.onnx"
+  final_model_onnx_path: "models/final_model.onnx"
+  # Training-side (.pth) checkpoints, used only by export_onnx.py / notebooks.
+  image_model_checkpoint: "models/image_model.pth"
+  video_model_checkpoint: "models/video_model.pth"
+  final_model_checkpoint: "models/final_model.pth"
+  backbone: "efficientnet_b0"
+  pretrained_encoder: false
+
+labels:
+  binary: ["real", "fake"]
+  manipulation_types:
+    ["copy_move", "splicing", "inpainting", "gan", "compression", "beautify"]
+  manipulation_type_none: "none"
+
+video:
+  sample_fps: 2.0
+  fake_frame_ratio_threshold: 0.30
+  max_frames_to_process: 150
+
+playground:
+  default_patch_size: [64, 64]
+  default_jpeg_quality: 20
+  default_blur_ksize: 15
+  default_upscale_factor: 2
+
+data:
+  root_local: "./data"
+  root_drive: "/content/drive/MyDrive/ForensicAI_Lab/data"
+  use_drive_if_available: true
+  images_dir: "images"
+  masks_dir: "masks"
+  labels_csv: "labels.csv"
+  synthetic_dir: "synthetic_data"
+  feedback_dir: "feedback_data"
+  datasets_registry:
+    - name: "CASIA2.0"
+      type: "image"
+      local_subdir: "casia2"
+    - name: "CoMoFoD"
+      type: "image"
+      local_subdir: "comofod"
+    - name: "Coverage"
+      type: "image"
+      local_subdir: "coverage"
+    - name: "IMD2020"
+      type: "image"
+      local_subdir: "imd2020"
+    - name: "FaceForensics++_images"
+      type: "image"
+      local_subdir: "ffpp_images"
+    - name: "DFDC_subset"
+      type: "video"
+      local_subdir: "dfdc_subset"
+    - name: "FaceForensics++_videos"
+      type: "video"
+      local_subdir: "ffpp_videos"
+
+feedback:
+  log_csv: "data/feedback_data/feedback_log.csv"
+  images_dir: "data/feedback_data/images"
+  retrain_manifest: "data/labels.csv"
+
+logging:
+  level: "INFO"

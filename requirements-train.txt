@@ -1,0 +1,19 @@
+# Training / export dependencies. Installed only in Colab/Kaggle notebooks,
+# and once locally (or in CI) to run services/detection/export_onnx.py.
+# Never required to run the served app locally -- see requirements.txt.
+#
+# Versions are left unpinned (minimum only) because Colab/Kaggle ship their
+# own CUDA-matched torch build, and a local one-time export should just use
+# whatever torch wheel is compatible with the local Python version.
+#
+# On Windows, prefer the CPU-only torch wheel explicitly for a lighter install:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+torch>=2.3
+torchvision>=0.18
+timm>=1.0
+onnx>=1.16
+opencv-python-headless>=4.10
+numpy>=1.26
+pandas>=2.2
+PyYAML>=6.0
