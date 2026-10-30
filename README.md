@@ -244,7 +244,11 @@ consistent.
 Stages 0/0b/1/3/4/5/6 assume a Drive-backed `dataset_root`; Stage 2 runs on
 Kaggle instead (DFDC is a Kaggle dataset, attachable without downloading it
 yourself) and its checkpoint needs to be manually copied to Drive afterward
-for Stage 3 to pick up -- see the notebook's last cell. Stage 2 can run
+for Stage 3 to pick up -- see the notebook's last cell. Many public DFDC
+re-uploads ship as ZIP archives rather than pre-extracted files; Stage 2
+extracts one zip part at a time into scratch space, processes it, and deletes
+it before moving to the next, so attaching ~100GB across many parts doesn't
+exceed Kaggle's working-disk quota. Stage 2 can run
 before or after Stage 1; it warm-starts from `image_model.pth` if present,
 otherwise trains from random weights.
 
