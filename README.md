@@ -266,8 +266,22 @@ Not bundled -- download these yourself and point `config/settings.yaml`'s
   note the official FF++ release is distributed by TUM, not Meta, and normally
   requires a request-form approval; Kaggle re-uploads are a faster alternative)
 
-`labels.csv` format: `filename,label,type` (see `data/labels.csv` for
-examples).
+`labels.csv` format: `filename,label,type`, e.g.:
+```
+filename,label,type
+img1.jpg,real,none
+img2.jpg,fake,copy_move
+img3.jpg,fake,splicing
+img4.jpg,fake,inpainting
+img5.jpg,fake,gan
+```
+The committed `data/labels.csv` is header-only (no example rows) --
+`00b_prepare_local_datasets.ipynb` populates it for real. Earlier scaffold
+versions shipped illustrative `img1.jpg`...`img5.jpg` rows directly in that
+file, which could get silently picked up as real training data if
+`dataset_root` ever resolved to the local project path instead of Drive
+(e.g. a fresh Colab session before Drive had real data on it) -- the header-only
+file plus the warning below prevent that.
 
 ## Current Limitations
 
