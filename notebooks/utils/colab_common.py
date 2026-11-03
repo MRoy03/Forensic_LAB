@@ -9,14 +9,22 @@ e.g.:
 
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 from pathlib import Path
 
 
 def is_colab() -> bool:
-    return os.path.exists("/content")
+    """The only reliable Colab signal: google.colab is only importable inside
+    an actual Colab runtime. Directory-existence checks are not reliable --
+    recent Colab images ship a /kaggle stub for kagglehub compatibility,
+    which previously caused real Colab sessions to misdetect as Kaggle."""
+    try:
+        import google.colab  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
 
 
 def mount_drive(mount_point: str = "/content/drive") -> None:

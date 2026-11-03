@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -121,11 +120,26 @@ def resolve_path(relative_path: str) -> Path:
     return p if p.is_absolute() else PROJECT_ROOT / p
 
 
+def is_colab() -> bool:
+    """The only reliable Colab signal: the google.colab package is only
+    importable inside an actual Colab runtime. Directory-existence checks
+    (e.g. os.path.exists("/content")) are not reliable -- some environments,
+    including Kaggle, also have a /content-like path, and recent Colab images
+    ship a /kaggle stub for kagglehub compatibility, which previously caused
+    this to misdetect Colab as Kaggle."""
+    try:
+        import google.colab  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
 def resolve_dataset_root(settings: Settings | None = None) -> Path:
     """Prefer the Google-Drive-mounted dataset root when running in Colab,
     otherwise fall back to the local dataset root (creating it if missing)."""
     settings = settings or get_settings()
-    in_colab = os.path.exists("/content")
+    in_colab = is_colab()
     drive_root = Path(settings.data.root_drive)
     local_root = resolve_path(settings.data.root_local)
 
