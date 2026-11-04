@@ -15,16 +15,15 @@ from pathlib import Path
 
 
 def is_colab() -> bool:
-    """The only reliable Colab signal: google.colab is only importable inside
-    an actual Colab runtime. Directory-existence checks are not reliable --
-    recent Colab images ship a /kaggle stub for kagglehub compatibility,
-    which previously caused real Colab sessions to misdetect as Kaggle."""
-    try:
-        import google.colab  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
+    """Authoritative Colab signal -- matches exactly what google.colab.drive's
+    own mount() uses internally to decide whether it's really running in a
+    genuine Colab-hosted backend. Weaker signals were tried and both turned
+    out unreliable: os.path.exists("/kaggle") false-positives inside real
+    Colab (recent Colab images ship a /kaggle stub for kagglehub
+    compatibility), and `import google.colab` succeeding can apparently also
+    be true outside a genuine Colab backend (e.g. some Kaggle environments),
+    which caused drive.mount() to fail with NotImplementedError there."""
+    return Path("/var/colab/hostname").exists()
 
 
 def mount_drive(mount_point: str = "/content/drive") -> None:

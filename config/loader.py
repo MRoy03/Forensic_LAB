@@ -121,18 +121,15 @@ def resolve_path(relative_path: str) -> Path:
 
 
 def is_colab() -> bool:
-    """The only reliable Colab signal: the google.colab package is only
-    importable inside an actual Colab runtime. Directory-existence checks
-    (e.g. os.path.exists("/content")) are not reliable -- some environments,
-    including Kaggle, also have a /content-like path, and recent Colab images
-    ship a /kaggle stub for kagglehub compatibility, which previously caused
-    this to misdetect Colab as Kaggle."""
-    try:
-        import google.colab  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
+    """Authoritative Colab signal -- matches exactly what google.colab.drive's
+    own mount() uses internally to decide whether it's really running in a
+    genuine Colab-hosted backend. Weaker signals were tried and both turned
+    out unreliable: os.path.exists("/kaggle") false-positives inside real
+    Colab (recent Colab images ship a /kaggle stub for kagglehub
+    compatibility), and `import google.colab` succeeding can apparently also
+    be true outside a genuine Colab backend (e.g. some Kaggle environments),
+    which caused drive.mount() to fail with NotImplementedError there."""
+    return Path("/var/colab/hostname").exists()
 
 
 def resolve_dataset_root(settings: Settings | None = None) -> Path:
