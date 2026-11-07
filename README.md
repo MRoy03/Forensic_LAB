@@ -236,6 +236,7 @@ consistent.
 | 0b | `00b_prepare_local_datasets.ipynb` | Colab | Unified `labels.csv` + `images/`/`masks/` from CASIA2.0, CoMoFoD, Coverage, IMD2020, FaceForensics++ (c23) |
 | 1 | `01_stage1_train_image_datasets.ipynb` | Colab | `models/image_model.pth` |
 | 2 | `02_stage2_dfdc_frame_extraction_and_train.ipynb` | **Kaggle** (DFDC attached via "Add Input") | `models/video_model.pth` |
+| 2b | `02b_stage2_train_from_extracted_frames.ipynb` | **Kaggle** (GPU; extracted-frames Dataset attached) | `models/video_model.pth`, without re-extracting |
 | 3 | `03_stage3_merge_image_video_datasets.ipynb` | Colab | Merged manifest + checkpoint |
 | 4 | `04_stage4_add_synthetic_playground_data.ipynb` | Colab | Synthetic data + checkpoint |
 | 5 | `05_stage5_add_feedback_data.ipynb` | Colab | Feedback-augmented checkpoint |
@@ -251,6 +252,17 @@ it before moving to the next, so attaching ~100GB across many parts doesn't
 exceed Kaggle's working-disk quota. Stage 2 can run
 before or after Stage 1; it warm-starts from `image_model.pth` if present,
 otherwise trains from random weights.
+
+**Extraction + training in one Stage 2 run can exceed a single Kaggle
+session** -- extraction alone took ~6 hours for the full 10-part set in
+practice, and CPU training measured ~2.8 hours *per epoch* on top of that.
+If one run keeps getting cut off, split the two halves: finish
+extraction-only as its own successful commit (CPU accelerator, saves
+GPU-hour quota since extraction doesn't need a GPU), turn that commit's
+output into a Kaggle Dataset ("New Dataset" from the Output tab), then run
+`02b_stage2_train_from_extracted_frames.ipynb` (GPU-enabled) with that
+dataset attached -- it remaps the manifest's paths to the new environment
+and trains without redoing any extraction.
 
 After Stage 6, copy `models/final_model.onnx` over `models/image_model.onnx`
 (or update `config/settings.yaml`) to make the live app use it -- no serving
