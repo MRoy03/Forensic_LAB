@@ -23,7 +23,7 @@ from config.loader import get_settings  # noqa: E402
 settings = get_settings()
 API_BASE_URL = settings.api.base_url
 
-MANIPULATION_TYPES = ["copy_move", "splicing", "compression", "blur", "beautify", "upscale"]
+MANIPULATION_TYPES = ["copy_move", "splicing", "inpainting", "compression", "blur", "beautify", "upscale"]
 CLASSIFIER_MANIPULATION_TYPES = settings.labels.manipulation_types + [
     settings.labels.manipulation_type_none
 ]

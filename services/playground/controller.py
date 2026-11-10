@@ -11,6 +11,7 @@ from services.playground.beautify import apply_beautify
 from services.playground.blur import apply_blur
 from services.playground.compression import apply_compression_artifact
 from services.playground.copy_move import apply_copy_move
+from services.playground.inpaint import apply_inpaint
 from services.playground.splice import apply_splice
 from services.playground.upscale import apply_upscale
 
@@ -39,6 +40,11 @@ def generate(manipulation_type: str, image_bgr: np.ndarray, params: dict | None 
         )
     elif manipulation_type == "splicing":
         image, mask = apply_splice(image_bgr)
+    elif manipulation_type == "inpainting":
+        patch_w, patch_h = settings.playground.default_patch_size
+        image, mask = apply_inpaint(
+            image_bgr, patch_size=(params.get("patch_w", patch_w), params.get("patch_h", patch_h))
+        )
     elif manipulation_type == "compression":
         image, mask = apply_compression_artifact(
             image_bgr, quality=params.get("quality", settings.playground.default_jpeg_quality)

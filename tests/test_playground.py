@@ -2,7 +2,8 @@ import pytest
 
 
 @pytest.mark.parametrize(
-    "manipulation_type", ["copy_move", "splicing", "compression", "blur", "beautify", "upscale"]
+    "manipulation_type",
+    ["copy_move", "splicing", "inpainting", "compression", "blur", "beautify", "upscale"],
 )
 def test_playground_generate(client, sample_image_bytes, manipulation_type):
     response = client.post(
