@@ -24,7 +24,15 @@ models:
   video_model_checkpoint: "models/video_model.pth"
   final_model_checkpoint: "models/final_model.pth"
   backbone: "efficientnet_b0"
-  pretrained_encoder: false
+  # timm adapts the pretrained 3-channel first-conv weights to in_chans=5
+  # automatically (sums/repeats the RGB filters) -- no custom code needed.
+  # Was false for every training notebook until now: none of them actually
+  # passed `pretrained=` through to ForensicMultiHeadNet, so every run so
+  # far trained EfficientNet-B0 from random init regardless of this value,
+  # which is very likely the dominant reason results stayed near chance
+  # even after fixing sampling/loss weighting and adding face-cropping --
+  # a from-scratch CNN needs far more data than these datasets provide.
+  pretrained_encoder: true
 
 labels:
   binary: ["real", "fake"]
