@@ -74,6 +74,12 @@ data:
     - name: "FaceForensics++_videos"
       type: "video"
       local_subdir: "ffpp_videos"
+    - name: "DeepDetect-2025"
+      type: "image"
+      local_subdir: "deepdetect2025"
+    - name: "DeepfakeArt_inpainting"
+      type: "image"
+      local_subdir: "deepfakeart"
 
 feedback:
   log_csv: "data/feedback_data/feedback_log.csv"
