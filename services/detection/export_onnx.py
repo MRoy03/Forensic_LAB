@@ -17,6 +17,7 @@ import argparse
 import logging
 from pathlib import Path
 
+import onnx
 import torch
 import torch.nn as nn
 
@@ -110,6 +111,20 @@ def export_to_onnx(
         # Older torch has no `dynamo`/`external_data` kwargs at all -- the
         # problem this guards against doesn't exist there either.
         torch.onnx.export(wrapped, dummy_input, str(out_path), **export_kwargs)
+
+    # Belt-and-suspenders: neither `dynamo=False` nor `external_data=False`
+    # reliably stopped this from splitting into an external .onnx.data
+    # sidecar in practice (the internal exporter dispatch doesn't consistently
+    # respect either flag across torch versions). Rather than keep chasing
+    # that, explicitly reload+resave via the onnx package itself, which
+    # guarantees a single self-contained file regardless of what the
+    # exporter just did -- the serving loader only ever expects one file.
+    onnx_model = onnx.load(str(out_path), load_external_data=True)
+    onnx.save_model(onnx_model, str(out_path), save_as_external_data=False)
+    sidecar = out_path.with_name(out_path.name + ".data")
+    if sidecar.exists():
+        sidecar.unlink()
+
     logger.info("Exported ONNX model to %s", out_path)
     return out_path
 
