@@ -98,9 +98,16 @@ def export_to_onnx(
         # Newer torch defaults to the dynamo-based exporter, which pulls in
         # onnxscript -- not in requirements-train.txt, and a far less mature
         # export path than the long-stable TorchScript-based one. Force that.
-        torch.onnx.export(wrapped, dummy_input, str(out_path), dynamo=False, **export_kwargs)
+        # external_data=False keeps this one small model (EfficientNet-B0 +
+        # heads, well under any real size threshold) as a single self-
+        # contained .onnx file -- the dynamo path has split weights into a
+        # sidecar .onnx.data file in practice, which the serving loader
+        # doesn't expect and is pure extra deployment risk for no benefit here.
+        torch.onnx.export(
+            wrapped, dummy_input, str(out_path), dynamo=False, external_data=False, **export_kwargs
+        )
     except TypeError:
-        # Older torch has no `dynamo` kwarg at all -- the dynamo-default
+        # Older torch has no `dynamo`/`external_data` kwargs at all -- the
         # problem this guards against doesn't exist there either.
         torch.onnx.export(wrapped, dummy_input, str(out_path), **export_kwargs)
     logger.info("Exported ONNX model to %s", out_path)
