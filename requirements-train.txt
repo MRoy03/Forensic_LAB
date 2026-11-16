@@ -17,6 +17,11 @@ onnx>=1.16
 # for reasons that don't reliably respect dynamo=False across versions --
 # this import is required whichever export path actually gets taken.
 onnxscript>=0.1
+# Stage 6's own verification cell runs the exported model through an actual
+# ONNX Runtime session to compare against the PyTorch output -- not needed
+# for export itself, but this is the one training-side notebook that
+# intentionally exercises the serving runtime too.
+onnxruntime>=1.20
 opencv-python-headless>=4.10
 numpy>=1.26
 pandas>=2.2
