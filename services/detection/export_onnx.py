@@ -85,10 +85,7 @@ def export_to_onnx(
     out_path = resolve_path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    torch.onnx.export(
-        wrapped,
-        dummy_input,
-        str(out_path),
+    export_kwargs = dict(
         input_names=[settings.inference.input_name],
         output_names=OUTPUT_NAMES,
         dynamic_axes={
@@ -97,6 +94,15 @@ def export_to_onnx(
         },
         opset_version=17,
     )
+    try:
+        # Newer torch defaults to the dynamo-based exporter, which pulls in
+        # onnxscript -- not in requirements-train.txt, and a far less mature
+        # export path than the long-stable TorchScript-based one. Force that.
+        torch.onnx.export(wrapped, dummy_input, str(out_path), dynamo=False, **export_kwargs)
+    except TypeError:
+        # Older torch has no `dynamo` kwarg at all -- the dynamo-default
+        # problem this guards against doesn't exist there either.
+        torch.onnx.export(wrapped, dummy_input, str(out_path), **export_kwargs)
     logger.info("Exported ONNX model to %s", out_path)
     return out_path
 
