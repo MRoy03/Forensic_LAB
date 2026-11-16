@@ -9,6 +9,17 @@ import pytest
 from fastapi.testclient import TestClient
 
 
+@pytest.fixture(autouse=True)
+def isolate_feedback_storage(tmp_path, monkeypatch):
+    """Without this, every test run appends real rows into the project's
+    actual data/feedback_data/feedback_log.csv -- tests/test_feedback.py's
+    hardcoded payloads accumulated there silently for weeks before this was
+    caught, masquerading as genuine user feedback."""
+    import services.feedback.storage as storage_module
+
+    monkeypatch.setattr(storage_module, "resolve_path", lambda p: tmp_path / p)
+
+
 @pytest.fixture(scope="session")
 def client() -> TestClient:
     from app.main import app
