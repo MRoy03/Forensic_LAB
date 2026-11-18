@@ -1,0 +1,23 @@
+name: Keep Render deployment awake
+
+# Render's free tier sleeps the service after 15 minutes with no traffic.
+# This pings the live URL every ~10 minutes so it never idles long enough
+# to sleep -- avoids the cold-start delay on the next real visit.
+#
+# Caveat: GitHub Actions' `schedule` cron isn't guaranteed to run exactly
+# on time (it can slip by a few minutes under GitHub's load), so this is
+# "very likely to stay awake," not an absolute guarantee. GitHub also
+# auto-disables scheduled workflows on a repo after 60 days with no
+# commits at all -- if that happens, re-enable it from the Actions tab.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the deployed app
+        run: curl -sf -o /dev/null -w "HTTP %{http_code}\n" https://forensic-lab-c39i.onrender.com/ || true
