@@ -1,0 +1,22 @@
+[theme]
+base = "dark"
+primaryColor = "#00f0ff"
+backgroundColor = "#05060f"
+secondaryBackgroundColor = "#11142a"
+textColor = "#e8ecff"
+borderColor = "#232849"
+linkColor = "#00f0ff"
+font = "Rajdhani:https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap"
+headingFont = "Orbitron:https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&display=swap"
+baseRadius = "1rem"
+buttonRadius = "0.75rem"
+showWidgetBorder = true
+showSidebarBorder = true
+
+[theme.sidebar]
+backgroundColor = "#080a18"
+secondaryBackgroundColor = "#0d0f22"
+textColor = "#e8ecff"
+borderColor = "#232849"
+primaryColor = "#8b5cf6"
+linkColor = "#8b5cf6"
