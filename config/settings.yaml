@@ -129,6 +129,9 @@ data:
     - name: "DeepfakeArt_inpainting"
       type: "image"
       local_subdir: "deepfakeart"
+    - name: "AI-ArtBench"
+      type: "image"
+      local_subdir: "ai_artbench"
 
 feedback:
   log_csv: "data/feedback_data/feedback_log.csv"

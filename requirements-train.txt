@@ -26,3 +26,6 @@ opencv-python-headless>=4.10
 numpy>=1.26
 pandas>=2.2
 PyYAML>=6.0
+# Stage 4d downloads GenBuster-200K-mini directly from Hugging Face
+# (ungated, no token needed) rather than a Kaggle "Add Input" attachment.
+huggingface_hub>=0.25
