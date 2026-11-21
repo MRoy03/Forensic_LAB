@@ -1,4 +1,14 @@
-"""FastAPI application entry point."""
+"""FastAPI application entry point.
+
+Which feature set this process actually serves is controlled by two
+environment variables, both defaulting to on so local dev and the original
+single-container deployment are unaffected:
+  - ENABLE_CORE=false  -- skip image/video/playground/feedback entirely
+  - ENABLE_AUDIO=false -- skip /predict/audio (and never load its model)
+Lets the audio model (by far the largest -- see DEPLOYMENT.md) run as its
+own separate deployment on memory-constrained free hosts, instead of every
+model being forced into one container. See app/routes.py for the router
+split this reads."""
 
 from __future__ import annotations
 
@@ -10,9 +20,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.routes import router
+from app.routes import AUDIO_ENABLED, CORE_ENABLED, audio_router, health_router, router
 from config.loader import get_settings
-from services.detection.loader import is_model_loaded
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,13 +31,16 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if is_model_loaded():
-        logger.info("Model loaded successfully on startup.")
-    else:
-        logger.warning(
-            "Model failed to load on startup -- /predict endpoints will error until "
-            "a valid .onnx file is available at the configured path."
-        )
+    if CORE_ENABLED:
+        from services.detection.loader import is_model_loaded
+
+        if is_model_loaded():
+            logger.info("Model loaded successfully on startup.")
+        else:
+            logger.warning(
+                "Model failed to load on startup -- /predict endpoints will error until "
+                "a valid .onnx file is available at the configured path."
+            )
     yield
 
 
@@ -42,7 +54,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router)
+app.include_router(health_router)
+if CORE_ENABLED:
+    app.include_router(router)
+if AUDIO_ENABLED:
+    app.include_router(audio_router)
 
 
 @app.exception_handler(RequestValidationError)

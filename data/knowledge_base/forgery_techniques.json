@@ -1,0 +1,62 @@
+[
+  {
+    "id": "copy_move",
+    "category": "copy_move",
+    "modality": "image",
+    "text": "Copy-move forgery duplicates a region of the same image and pastes it elsewhere, often to hide or clone an object. Detectable through duplicated texture/noise patterns, matching keypoint clusters between two regions, and unnatural repetition in lighting or shadow direction between the original and pasted patch."
+  },
+  {
+    "id": "splicing",
+    "category": "splicing",
+    "modality": "image",
+    "text": "Splicing combines regions from two different source images into one composite. Tell-tale signs include inconsistent lighting direction or color temperature across the boundary, mismatched noise/compression levels between regions, and visible edge artifacts where the spliced region meets the background."
+  },
+  {
+    "id": "inpainting",
+    "category": "inpainting",
+    "modality": "image",
+    "text": "Inpainting (content-aware fill) removes an object and synthesizes plausible background texture in its place. Detectable through texture discontinuity at the fill boundary, unnaturally smooth or repetitive patches, and loss of fine high-frequency detail (hair, grain, fabric weave) inside the filled region compared to its surroundings."
+  },
+  {
+    "id": "gan",
+    "category": "gan",
+    "modality": "image",
+    "text": "GAN- or diffusion-based generation produces an image statistically from a learned model rather than a camera sensor. Common artifacts include unnatural high-frequency checkerboard patterns from upsampling layers, slightly inconsistent lighting/reflections, asymmetric facial features or extra/missing fingers, and a lack of genuine sensor noise that a real camera would leave behind."
+  },
+  {
+    "id": "compression",
+    "category": "compression",
+    "modality": "image",
+    "text": "Localized compression inconsistency occurs when one region of an image has been re-compressed (e.g. re-saved as JPEG) at a different quality level than the rest, usually a byproduct of local editing. Detectable via block-boundary artifacts and quantization-table mismatches that differ between the altered region and the rest of the image."
+  },
+  {
+    "id": "beautify",
+    "category": "beautify",
+    "modality": "image",
+    "text": "Beautification/skin-smoothing filters blur or retouch skin texture, remove blemishes, and reshape facial features. Detectable through unnaturally smooth skin lacking pore-level detail, warped background lines near reshaped areas, and softened edges around the face compared to sharper surrounding detail."
+  },
+  {
+    "id": "none",
+    "category": "none",
+    "modality": "image",
+    "text": "No manipulation artifacts were detected. The image's noise pattern, compression characteristics, and lighting are consistent throughout, matching what is expected from an unedited photograph straight out of a camera."
+  },
+  {
+    "id": "ai_generated",
+    "category": "ai_generated",
+    "modality": "image",
+    "text": "This image shows statistical and stylistic patterns consistent with modern AI image generators (e.g. diffusion models or GANs) rather than a camera photograph or traditional hand-made artwork, based on texture regularities and generator-specific artifacts that a second, independently-trained detector model picked up on."
+  },
+  {
+    "id": "audio_fake",
+    "category": "fake",
+    "modality": "audio",
+    "text": "This audio shows spectral and temporal patterns consistent with synthetic speech or voice cloning rather than a genuine human recording -- typically overly regular pitch/formant transitions, unnatural breathing or silence patterns, and artifacts left by the vocoder used to generate the waveform."
+  },
+  {
+    "id": "audio_real",
+    "category": "real",
+    "modality": "audio",
+    "text": "No voice-synthesis artifacts were detected. The recording's pitch variation, breathing patterns, and background noise are consistent with a genuine human voice recording."
+  }
+]

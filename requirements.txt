@@ -22,3 +22,12 @@ PyYAML>=6.0
 scikit-image>=0.24
 pytest>=8.3
 httpx>=0.27
+
+# Audio deepfake detection (services/audio/) -- libsndfile wrapper, no torch.
+soundfile>=0.12
+# Already pulled in transitively by scikit-image, but services/audio/extractor.py
+# imports it directly (scipy.signal.resample), so it's pinned explicitly here too.
+scipy>=1.13
+# RAG explanation retrieval (services/explainability/rag.py) -- loads
+# models/rag/tokenizer.json directly, Rust-backed, no torch.
+tokenizers>=0.20

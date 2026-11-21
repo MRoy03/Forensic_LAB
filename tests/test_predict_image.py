@@ -15,6 +15,11 @@ def test_predict_image(client, sample_image_bytes):
     assert isinstance(body["mask"], str)
     assert isinstance(body["explanation"], str) and len(body["explanation"]) > 0
 
+    second_opinion = body.get("second_opinion")
+    assert second_opinion is not None
+    assert second_opinion["label"] in ("ai_generated", "real")
+    assert 0.0 <= second_opinion["confidence"] <= 1.0
+
 
 def test_predict_image_rejects_garbage(client):
     response = client.post(

@@ -39,6 +39,11 @@ settings = get_settings()
 # localhost (local dev) or a deployed URL (e.g. a separate Render/HF Space
 # host) -- see DEPLOYMENT.md.
 API_BASE_URL = os.environ.get("API_BASE_URL", settings.api.base_url)
+# The audio model is large enough to warrant its own separate deployment on
+# memory-constrained free hosts (see DEPLOYMENT.md's split-services option)
+# -- defaults to API_BASE_URL so a single combined deployment (or local dev)
+# needs no extra configuration.
+AUDIO_API_BASE_URL = os.environ.get("AUDIO_API_BASE_URL", API_BASE_URL)
 
 MANIPULATION_TYPES = ["copy_move", "splicing", "inpainting", "compression", "blur", "beautify", "upscale"]
 CLASSIFIER_MANIPULATION_TYPES = settings.labels.manipulation_types + [
@@ -79,6 +84,15 @@ FEATURE_GUIDE = [
         "so you can see exactly where it happened.",
     ),
     (
+        "Audio Detection", "🎙️",
+        "Upload a voice clip and get a real/synthetic verdict for voice-clone and text-to-speech detection.",
+        "Raw waveform resampled to 16kHz mono, zero-mean/unit-variance "
+        "normalized, and fed through a wav2vec2-based classifier "
+        "(ai8shiro/deepfake-audio-wav2vec2-ONNX) fine-tuned specifically for "
+        "real-vs-synthetic speech -- a separate modality from the image/video "
+        "models, with its own ONNX session and no shared preprocessing.",
+    ),
+    (
         "Quiz Mode", "🧠",
         "Test your own eye against the model -- guess real or fake, then see who's right.",
         "Generates a random challenge the same way Playground does, hides the "
@@ -94,10 +108,13 @@ FEATURE_GUIDE = [
     ),
 ]
 
-PAGES_ORDER = ["Home", "Image Detection", "Video Detection", "Playground", "Quiz Mode", "Feedback", "About"]
+PAGES_ORDER = [
+    "Home", "Image Detection", "Video Detection", "Audio Detection", "Playground",
+    "Quiz Mode", "Feedback", "About",
+]
 PAGE_ICONS = {
-    "Home": "🏠", "Image Detection": "🖼️", "Video Detection": "🎞️", "Playground": "🧪",
-    "Quiz Mode": "🧠", "Feedback": "📝", "About": "ℹ️",
+    "Home": "🏠", "Image Detection": "🖼️", "Video Detection": "🎞️", "Audio Detection": "🎙️",
+    "Playground": "🧪", "Quiz Mode": "🧠", "Feedback": "📝", "About": "ℹ️",
 }
 
 
@@ -342,6 +359,24 @@ def render_predict_result(body: dict) -> None:
                 "saliency until a trained model is exported (see models/README.md)."
             )
 
+    second_opinion = body.get("second_opinion")
+    if second_opinion:
+        with st.container(border=True, key="glass-pred-second-opinion"):
+            st.caption(f"Second opinion -- {second_opinion['model_name']}")
+            agrees = (second_opinion["label"] == "ai_generated") == (body["label"] == "fake")
+            st.metric(
+                "Independent verdict",
+                second_opinion["label"].replace("_", " ").upper(),
+                delta=f"{second_opinion['confidence']:.0%} confidence",
+                delta_color="normal" if agrees else "inverse",
+            )
+            st.write(second_opinion["explanation"])
+            if not agrees:
+                st.warning(
+                    "This independent model disagrees with the primary verdict above -- "
+                    "worth a closer manual look."
+                )
+
 
 # ---------------------------------------------------------------------------
 # Pages
@@ -439,6 +474,34 @@ def page_video_detection() -> None:
             )
             st.write(body["explanation"])
         st.dataframe(body["frame_results"], use_container_width=True)
+
+
+def page_audio_detection() -> None:
+    page_header(
+        "🎙️", "Audio Detection",
+        "Upload a voice clip for a real/synthetic verdict -- catches voice cloning and text-to-speech generation.",
+    )
+    uploaded = st.file_uploader("Upload an audio clip", type=["wav", "flac", "ogg"])
+    if uploaded is None:
+        return
+
+    st.audio(uploaded)
+    if st.button("Analyze audio", type="primary"):
+        with loading_animation("ANALYZING AUDIO..."):
+            response = requests.post(
+                f"{AUDIO_API_BASE_URL}/predict/audio",
+                files={"file": (uploaded.name, uploaded.getvalue(), uploaded.type)},
+                timeout=60,
+            )
+        if response.status_code != 200:
+            st.error(f"Request failed: {response.status_code} {response.text}")
+            return
+
+        body = response.json()
+        with st.container(border=True, key="glass-audio-verdict"):
+            st.caption("Prediction")
+            st.metric("Label", body["label"].upper(), delta=f"{body['confidence']:.0%} confidence")
+            st.write(body["explanation"])
 
 
 def _generate_playground_image(manipulation_type: str, image_bytes: bytes, filename: str) -> dict | None:
@@ -580,6 +643,7 @@ PAGES = {
     "Home": page_home,
     "Image Detection": page_image_detection,
     "Video Detection": page_video_detection,
+    "Audio Detection": page_audio_detection,
     "Playground": page_playground,
     "Quiz Mode": page_quiz,
     "Feedback": page_feedback,

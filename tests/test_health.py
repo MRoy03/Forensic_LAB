@@ -5,3 +5,6 @@ def test_health(client):
     assert body["status"] == "ok"
     assert body["model_loaded"] is True
     assert body["runtime"] == "onnxruntime"
+    assert body["ensemble_model_loaded"] is True
+    assert body["audio_model_loaded"] is True
+    assert body["rag_model_loaded"] is True

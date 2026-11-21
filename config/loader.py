@@ -80,6 +80,34 @@ class DataSettings(BaseModel):
     datasets_registry: list[DatasetEntry]
 
 
+class EnsembleSettings(BaseModel):
+    model_onnx_path: str
+    input_name: str
+    output_name: str
+    resize_shortest_edge: int
+    crop_size: tuple[int, int]
+    image_mean: tuple[float, float, float]
+    image_std: tuple[float, float, float]
+    ai_generated_threshold: float
+
+
+class AudioSettings(BaseModel):
+    model_onnx_path: str
+    input_name: str
+    output_name: str
+    sample_rate: int
+    id2label: dict[int, str]
+
+
+class RagSettings(BaseModel):
+    embedder_onnx_path: str
+    tokenizer_path: str
+    knowledge_base_path: str
+    embeddings_path: str
+    max_seq_length: int
+    hidden_size: int
+
+
 class FeedbackSettings(BaseModel):
     log_csv: str
     images_dir: str
@@ -95,6 +123,9 @@ class Settings(BaseModel):
     api: ApiSettings
     inference: InferenceSettings
     models: ModelsSettings
+    ensemble: EnsembleSettings
+    audio: AudioSettings
+    rag: RagSettings
     labels: LabelsSettings
     video: VideoSettings
     playground: PlaygroundSettings

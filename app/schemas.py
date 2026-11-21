@@ -27,6 +27,16 @@ class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
     runtime: str
+    ensemble_model_loaded: bool
+    audio_model_loaded: bool
+    rag_model_loaded: bool
+
+
+class SecondOpinion(BaseModel):
+    label: Literal["ai_generated", "real"]
+    confidence: float
+    model_name: str
+    explanation: str
 
 
 class PredictImageResponse(BaseModel):
@@ -35,6 +45,17 @@ class PredictImageResponse(BaseModel):
     manipulation_type: ManipulationType
     mask: str  # base64-encoded PNG, "" when label == real
     gradcam: str  # base64-encoded PNG (Eigen-CAM heatmap overlay)
+    explanation: str
+    # Independent pretrained model's own verdict (TensorFold/detectra-v1),
+    # shown alongside rather than fused into the primary verdict -- stays
+    # transparent when the two disagree instead of silently overriding one
+    # with an unvalidated fusion heuristic. None if that model isn't loaded.
+    second_opinion: Optional[SecondOpinion] = None
+
+
+class PredictAudioResponse(BaseModel):
+    label: Literal["real", "fake"]
+    confidence: float
     explanation: str
 
 

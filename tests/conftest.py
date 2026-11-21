@@ -3,9 +3,12 @@ the fly so no binary fixtures need to be committed."""
 
 from __future__ import annotations
 
+import io
+
 import cv2
 import numpy as np
 import pytest
+import soundfile as sf
 from fastapi.testclient import TestClient
 
 
@@ -49,3 +52,12 @@ def sample_video_bytes(tmp_path) -> bytes:
     writer.release()
 
     return path.read_bytes()
+
+
+@pytest.fixture
+def sample_audio_bytes() -> bytes:
+    t = np.linspace(0, 1.0, 16000, endpoint=False)
+    wave = (0.1 * np.sin(2 * np.pi * 220 * t)).astype(np.float32)
+    buf = io.BytesIO()
+    sf.write(buf, wave, 16000, format="WAV")
+    return buf.getvalue()

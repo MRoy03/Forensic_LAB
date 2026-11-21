@@ -11,7 +11,12 @@ env/
 models/*.pth
 models/*.onnx
 models/*.onnx.data
+models/**/*.onnx
+models/**/*.onnx_data
+models/**/*.onnx.data
+models/**/*.safetensors
 !models/.gitkeep
+!models/**/.gitkeep
 
 # Data (large / user-specific)
 data/images/*
@@ -28,3 +33,11 @@ data/feedback_data/feedback_log.csv
 .DS_Store
 Thumbs.db
 *.log
+
+# SSH keys (never commit -- e.g. Oracle Cloud's downloaded instance key pair).
+# *.pub as its own broad pattern, not just *.key.pub: OCI's browser download
+# can rename a duplicate to e.g. "ssh-key-2026-11-21.key (2).pub", which the
+# narrower suffix-only pattern would miss.
+*.pem
+*.key
+*.pub

@@ -34,6 +34,47 @@ models:
   # a from-scratch CNN needs far more data than these datasets provide.
   pretrained_encoder: true
 
+# Pretrained "second opinion" image model (TensorFold/detectra-v1, ViT-S/16@384,
+# MIT, zero-training). Own preprocessing path, separate from the 5-channel
+# RGB+ELA+FFT pipeline the custom model uses. Preprocessing/threshold/sha256
+# taken directly from the model card (huggingface.co/TensorFold/detectra-v1),
+# not guessed: shortest-edge resize -> center-crop -> ImageNet normalize ->
+# sigmoid(logit) compared against the model's own reported 0.65 operating
+# threshold (not an arbitrary 0.5).
+ensemble:
+  model_onnx_path: "models/ensemble/detectra_v1.onnx"
+  input_name: "pixel_values"
+  output_name: "logit"
+  resize_shortest_edge: 440
+  crop_size: [384, 384]
+  image_mean: [0.485, 0.456, 0.406]
+  image_std: [0.229, 0.224, 0.225]
+  ai_generated_threshold: 0.65
+
+# Audio deepfake/voice-clone detection (ai8shiro/deepfake-audio-wav2vec2-ONNX,
+# wav2vec2-base + linear head, MIT, zero-training). Own modality, own binary
+# schema -- not folded into the image/video manipulation-type taxonomy.
+audio:
+  model_onnx_path: "models/audio/wav2vec2_deepfake.onnx"
+  input_name: "input_values"
+  output_name: "logits"
+  sample_rate: 16000
+  id2label:
+    0: "real"
+    1: "fake"
+
+# Retrieval-only RAG explanations (onnx-community/all-MiniLM-L6-v2-ONNX).
+# Pure retrieval, no generative LLM call -- zero hallucination risk, replaces
+# predictor.py's old hardcoded _EXPLANATIONS dict lookup with a cosine-
+# similarity match against a small curated knowledge base.
+rag:
+  embedder_onnx_path: "models/rag/minilm.onnx"
+  tokenizer_path: "models/rag/tokenizer.json"
+  knowledge_base_path: "data/knowledge_base/forgery_techniques.json"
+  embeddings_path: "data/knowledge_base/embeddings.npy"
+  max_seq_length: 128
+  hidden_size: 384
+
 labels:
   binary: ["real", "fake"]
   manipulation_types:

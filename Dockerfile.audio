@@ -1,0 +1,39 @@
+# Standalone audio-only service -- see DEPLOYMENT.md's "split Render
+# services" option. The audio model (~116MB quantized, still the largest
+# model in this project) is isolated into its own free Render instance so
+# it gets a full, uncontested 512MB RAM ceiling instead of competing with
+# the image/video/RAG models and Streamlit for one container's budget.
+#
+# No Streamlit here -- that stays in the "core" deployment (built from the
+# root Dockerfile with ENABLE_AUDIO=false set as an env var). This image
+# just runs uvicorn directly with ENABLE_CORE=false / ENABLE_AUDIO=true,
+# so app/main.py only registers /health and /predict/audio.
+#
+# Reuses the full requirements.txt rather than a trimmed one: the routers
+# in app/routes.py are all imported at module level regardless of which
+# ones get registered, so opencv etc. still need to be installed even
+# though video/image routes are never reachable from this image. Costs a
+# bit of extra build size, not runtime RAM (model files, not libraries,
+# are what's actually large).
+
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+ENV ENABLE_CORE=false
+ENV ENABLE_AUDIO=true
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 7860
+
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-7860}

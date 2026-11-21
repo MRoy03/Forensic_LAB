@@ -3,29 +3,37 @@ ONNX forward pass -> classification + mask + Eigen-CAM -> response."""
 
 from __future__ import annotations
 
-from app.schemas import Label, ManipulationType, PredictImageResponse
+import logging
+
+from app.schemas import Label, ManipulationType, PredictImageResponse, SecondOpinion
 from config.loader import get_settings
 from services.detection.classifier import interpret_classification
+from services.detection.ensemble import is_ensemble_loaded, predict_second_opinion
 from services.detection.loader import get_session
 from services.detection.segmentor import interpret_mask
 from services.explainability.gradcam import generate_eigencam
+from services.explainability.rag import explain
 from services.postprocessing.formatter import array_to_base64_png
 from services.postprocessing.overlay import overlay_heatmap, overlay_mask
 from services.preprocessing.pipeline import decode_image_bytes, preprocess_image_batch
 
-_EXPLANATIONS = {
-    "copy_move": "Duplicated region patterns detected, consistent with copy-move forgery.",
-    "splicing": "Edge and lighting inconsistencies detected at a region boundary, consistent with splicing.",
-    "inpainting": "Texture discontinuity detected, consistent with inpainting/content-aware fill.",
-    "gan": "Statistical artifacts consistent with GAN-based generation detected.",
-    "compression": "Localized compression inconsistencies detected.",
-    "beautify": "Skin-smoothing / beautification artifacts detected.",
-    "none": "No manipulation artifacts detected; image appears authentic.",
-}
+logger = logging.getLogger(__name__)
 
 
-def _explanation_for(manipulation_type: str) -> str:
-    return _EXPLANATIONS.get(manipulation_type, "Manipulation artifacts detected.")
+def _second_opinion_for(original) -> SecondOpinion | None:
+    if not is_ensemble_loaded():
+        return None
+    try:
+        opinion = predict_second_opinion(original)
+        return SecondOpinion(
+            label=opinion.label,
+            confidence=opinion.confidence,
+            model_name=opinion.model_name,
+            explanation=opinion.explanation,
+        )
+    except Exception:
+        logger.exception("Ensemble second-opinion prediction failed")
+        return None
 
 
 def predict_image(image_bytes: bytes) -> PredictImageResponse:
@@ -66,5 +74,6 @@ def predict_image(image_bytes: bytes) -> PredictImageResponse:
         manipulation_type=ManipulationType(result.manipulation_type),
         mask=mask_b64,
         gradcam=gradcam_b64,
-        explanation=_explanation_for(result.manipulation_type),
+        explanation=explain(result.manipulation_type, modality="image"),
+        second_opinion=_second_opinion_for(original),
     )
