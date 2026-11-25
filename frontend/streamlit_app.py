@@ -44,6 +44,11 @@ API_BASE_URL = os.environ.get("API_BASE_URL", settings.api.base_url)
 # -- defaults to API_BASE_URL so a single combined deployment (or local dev)
 # needs no extra configuration.
 AUDIO_API_BASE_URL = os.environ.get("AUDIO_API_BASE_URL", API_BASE_URL)
+# Same reasoning, for Organika/sdxl-detector specifically -- served from its
+# own standalone /predict/organika endpoint (e.g. alongside audio on the
+# Oracle VM) rather than bundled into /predict/image, so the main backend's
+# memory budget doesn't have to include it.
+ORGANIKA_API_BASE_URL = os.environ.get("ORGANIKA_API_BASE_URL", API_BASE_URL)
 
 MANIPULATION_TYPES = ["copy_move", "splicing", "inpainting", "compression", "blur", "beautify", "upscale"]
 CLASSIFIER_MANIPULATION_TYPES = settings.labels.manipulation_types + [
@@ -359,23 +364,26 @@ def render_predict_result(body: dict) -> None:
                 "saliency until a trained model is exported (see models/README.md)."
             )
 
-    second_opinion = body.get("second_opinion")
-    if second_opinion:
-        with st.container(border=True, key="glass-pred-second-opinion"):
-            st.caption(f"Second opinion -- {second_opinion['model_name']}")
-            agrees = (second_opinion["label"] == "ai_generated") == (body["label"] == "fake")
-            st.metric(
-                "Independent verdict",
-                second_opinion["label"].replace("_", " ").upper(),
-                delta=f"{second_opinion['confidence']:.0%} confidence",
-                delta_color="normal" if agrees else "inverse",
-            )
-            st.write(second_opinion["explanation"])
-            if not agrees:
-                st.warning(
-                    "This independent model disagrees with the primary verdict above -- "
-                    "worth a closer manual look."
-                )
+    second_opinions = body.get("second_opinions") or []
+    if second_opinions:
+        opinion_cols = st.columns(len(second_opinions))
+        for i, (col, second_opinion) in enumerate(zip(opinion_cols, second_opinions)):
+            with col:
+                with st.container(border=True, key=f"glass-pred-second-opinion-{i}"):
+                    st.caption(f"Second opinion -- {second_opinion['model_name']}")
+                    agrees = (second_opinion["label"] == "ai_generated") == (body["label"] == "fake")
+                    st.metric(
+                        "Independent verdict",
+                        second_opinion["label"].replace("_", " ").upper(),
+                        delta=f"{second_opinion['confidence']:.0%} confidence",
+                        delta_color="normal" if agrees else "inverse",
+                    )
+                    st.write(second_opinion["explanation"])
+                    if not agrees:
+                        st.warning(
+                            "This independent model disagrees with the primary verdict above -- "
+                            "worth a closer manual look."
+                        )
 
 
 # ---------------------------------------------------------------------------
@@ -444,7 +452,27 @@ def page_image_detection() -> None:
         if response.status_code != 200:
             st.error(f"Request failed: {response.status_code} {response.text}")
             return
-        render_predict_result(response.json())
+        body = response.json()
+
+        # Organika may be served separately (e.g. alongside audio on the
+        # Oracle VM) rather than bundled into /predict/image's own response
+        # -- same split pattern as audio, fetched directly if it's not
+        # already present. Best-effort: a failed/missing fetch just means
+        # one fewer second opinion shown, not a broken page.
+        existing_models = {o["model_name"] for o in body.get("second_opinions", [])}
+        if "Organika/sdxl-detector" not in existing_models:
+            try:
+                organika_resp = requests.post(
+                    f"{ORGANIKA_API_BASE_URL}/predict/organika",
+                    files={"file": (uploaded.name, uploaded.getvalue(), uploaded.type)},
+                    timeout=60,
+                )
+                if organika_resp.status_code == 200:
+                    body.setdefault("second_opinions", []).append(organika_resp.json())
+            except requests.RequestException:
+                pass
+
+        render_predict_result(body)
 
 
 def page_video_detection() -> None:
@@ -481,7 +509,7 @@ def page_audio_detection() -> None:
         "🎙️", "Audio Detection",
         "Upload a voice clip for a real/synthetic verdict -- catches voice cloning and text-to-speech generation.",
     )
-    uploaded = st.file_uploader("Upload an audio clip", type=["wav", "flac", "ogg"])
+    uploaded = st.file_uploader("Upload an audio clip", type=["wav", "flac", "ogg", "mp3"])
     if uploaded is None:
         return
 

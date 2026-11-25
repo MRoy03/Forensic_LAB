@@ -28,6 +28,7 @@ class HealthResponse(BaseModel):
     model_loaded: bool
     runtime: str
     ensemble_model_loaded: bool
+    organika_model_loaded: bool
     audio_model_loaded: bool
     rag_model_loaded: bool
 
@@ -46,11 +47,12 @@ class PredictImageResponse(BaseModel):
     mask: str  # base64-encoded PNG, "" when label == real
     gradcam: str  # base64-encoded PNG (Eigen-CAM heatmap overlay)
     explanation: str
-    # Independent pretrained model's own verdict (TensorFold/detectra-v1),
-    # shown alongside rather than fused into the primary verdict -- stays
-    # transparent when the two disagree instead of silently overriding one
-    # with an unvalidated fusion heuristic. None if that model isn't loaded.
-    second_opinion: Optional[SecondOpinion] = None
+    # Independent pretrained models' own verdicts (TensorFold/detectra-v1,
+    # Organika/sdxl-detector), shown alongside rather than fused into the
+    # primary verdict -- stays transparent when they disagree instead of
+    # silently overriding one with an unvalidated fusion heuristic. Only
+    # includes whichever of the two are actually loaded; empty if neither is.
+    second_opinions: list[SecondOpinion] = []
 
 
 class PredictAudioResponse(BaseModel):

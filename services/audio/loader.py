@@ -8,7 +8,7 @@ from functools import lru_cache
 
 import onnxruntime as ort
 
-from config.loader import get_settings, resolve_path
+from config.loader import get_settings, is_cached, resolve_path
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +28,7 @@ def get_audio_session() -> ort.InferenceSession:
 
 
 def is_audio_model_loaded() -> bool:
-    try:
-        get_audio_session()
-        return True
-    except Exception:
-        logger.exception("Audio model failed to load")
-        return False
+    """Passive check: has this already been loaded, without triggering a
+    load as a side effect -- only ever called from /health, which must
+    never force this (the largest) model into memory just by being polled."""
+    return is_cached(get_audio_session)

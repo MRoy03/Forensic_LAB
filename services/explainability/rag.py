@@ -19,7 +19,7 @@ import numpy as np
 import onnxruntime as ort
 from tokenizers import Tokenizer
 
-from config.loader import get_settings, resolve_path
+from config.loader import get_settings, is_cached, resolve_path
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +40,14 @@ def get_rag_session() -> ort.InferenceSession:
 
 
 def is_rag_loaded() -> bool:
-    try:
-        get_rag_session()
-        get_tokenizer()
-        return True
-    except Exception:
-        logger.exception("RAG embedder failed to load")
-        return False
+    """Passive check: has this already been loaded, without triggering a
+    load as a side effect -- only ever called from /health. Worth knowing:
+    explain() (used by every image/audio prediction) does a direct
+    knowledge-base dict lookup and never actually touches this embedder at
+    all -- only retrieve() does, which nothing currently calls in the
+    serving path -- so before this fix, /health was loading an 86MB model
+    that normal serving never even uses, just by being polled."""
+    return is_cached(get_rag_session)
 
 
 @lru_cache

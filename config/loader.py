@@ -91,6 +91,15 @@ class EnsembleSettings(BaseModel):
     ai_generated_threshold: float
 
 
+class OrganikaSettings(BaseModel):
+    model_onnx_path: str
+    input_name: str
+    output_name: str
+    image_size: tuple[int, int]
+    image_mean: tuple[float, float, float]
+    image_std: tuple[float, float, float]
+
+
 class AudioSettings(BaseModel):
     model_onnx_path: str
     input_name: str
@@ -124,6 +133,7 @@ class Settings(BaseModel):
     inference: InferenceSettings
     models: ModelsSettings
     ensemble: EnsembleSettings
+    organika: OrganikaSettings
     audio: AudioSettings
     rag: RagSettings
     labels: LabelsSettings
@@ -149,6 +159,18 @@ def resolve_path(relative_path: str) -> Path:
     """Resolve a path from settings.yaml relative to the project root."""
     p = Path(relative_path)
     return p if p.is_absolute() else PROJECT_ROOT / p
+
+
+def is_cached(zero_arg_lru_cached_fn) -> bool:
+    """True if an @lru_cache-wrapped, zero-argument loader (e.g.
+    get_organika_session) has already been called successfully at least
+    once -- checked WITHOUT invoking it, unlike calling the loader itself.
+    Use this for "is this optional/heavy model already loaded" checks (e.g.
+    in /health) -- calling the loader directly for that purpose would load
+    the model as a side effect of merely checking, so a health-check poll
+    would silently force a heavy model into memory even if no request ever
+    actually needed it."""
+    return zero_arg_lru_cached_fn.cache_info().currsize > 0
 
 
 def is_colab() -> bool:

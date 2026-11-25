@@ -15,10 +15,13 @@ def test_predict_image(client, sample_image_bytes):
     assert isinstance(body["mask"], str)
     assert isinstance(body["explanation"], str) and len(body["explanation"]) > 0
 
-    second_opinion = body.get("second_opinion")
-    assert second_opinion is not None
-    assert second_opinion["label"] in ("ai_generated", "real")
-    assert 0.0 <= second_opinion["confidence"] <= 1.0
+    second_opinions = body.get("second_opinions")
+    assert second_opinions and len(second_opinions) == 2  # detectra-v1 + Organika/sdxl-detector
+    model_names = {o["model_name"] for o in second_opinions}
+    assert model_names == {"TensorFold/detectra-v1", "Organika/sdxl-detector"}
+    for opinion in second_opinions:
+        assert opinion["label"] in ("ai_generated", "real")
+        assert 0.0 <= opinion["confidence"] <= 1.0
 
 
 def test_predict_image_rejects_garbage(client):

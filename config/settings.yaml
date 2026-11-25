@@ -51,6 +51,21 @@ ensemble:
   image_std: [0.229, 0.224, 0.225]
   ai_generated_threshold: 0.65
 
+# Second image-ensemble "second opinion" (Organika/sdxl-detector, Swin
+# Transformer, open license), converted from its raw PyTorch safetensors
+# weights via scripts/convert_organika_to_onnx.py -- that repo ships no
+# ONNX export of its own. Preprocessing (plain resize to 224x224, no
+# shortest-edge/crop step -- its preprocessor_config.json has no separate
+# crop_size, unlike detectra-v1) and label order (0=artificial, 1=human)
+# taken directly from the HF repo's config.json/preprocessor_config.json.
+organika:
+  model_onnx_path: "models/ensemble/organika_sdxl_detector.onnx"
+  input_name: "pixel_values"
+  output_name: "logits"
+  image_size: [224, 224]
+  image_mean: [0.485, 0.456, 0.406]
+  image_std: [0.229, 0.224, 0.225]
+
 # Audio deepfake/voice-clone detection (ai8shiro/deepfake-audio-wav2vec2-ONNX,
 # wav2vec2-base + linear head, MIT, zero-training). Own modality, own binary
 # schema -- not folded into the image/video manipulation-type taxonomy.

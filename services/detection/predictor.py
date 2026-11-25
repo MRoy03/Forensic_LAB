@@ -8,7 +8,7 @@ import logging
 from app.schemas import Label, ManipulationType, PredictImageResponse, SecondOpinion
 from config.loader import get_settings
 from services.detection.classifier import interpret_classification
-from services.detection.ensemble import is_ensemble_loaded, predict_second_opinion
+from services.detection.ensemble import predict_second_opinions
 from services.detection.loader import get_session
 from services.detection.segmentor import interpret_mask
 from services.explainability.gradcam import generate_eigencam
@@ -20,20 +20,16 @@ from services.preprocessing.pipeline import decode_image_bytes, preprocess_image
 logger = logging.getLogger(__name__)
 
 
-def _second_opinion_for(original) -> SecondOpinion | None:
-    if not is_ensemble_loaded():
-        return None
-    try:
-        opinion = predict_second_opinion(original)
-        return SecondOpinion(
+def _second_opinions_for(original) -> list[SecondOpinion]:
+    return [
+        SecondOpinion(
             label=opinion.label,
             confidence=opinion.confidence,
             model_name=opinion.model_name,
             explanation=opinion.explanation,
         )
-    except Exception:
-        logger.exception("Ensemble second-opinion prediction failed")
-        return None
+        for opinion in predict_second_opinions(original)
+    ]
 
 
 def predict_image(image_bytes: bytes) -> PredictImageResponse:
@@ -75,5 +71,5 @@ def predict_image(image_bytes: bytes) -> PredictImageResponse:
         mask=mask_b64,
         gradcam=gradcam_b64,
         explanation=explain(result.manipulation_type, modality="image"),
-        second_opinion=_second_opinion_for(original),
+        second_opinions=_second_opinions_for(original),
     )

@@ -1,18 +1,29 @@
 """API routes: thin wrappers that validate input, delegate to services, and
 translate exceptions into proper HTTP status codes.
 
-Split into three routers so a deployment can enable only what it actually
-serves -- the audio model is by far the largest (see DEPLOYMENT.md's
-memory-budget section) and, on memory-constrained free hosts, is meant to
-run as its OWN separate service rather than forcing every model into one
-container:
+Split into four routers so a deployment can enable only what it actually
+serves -- the audio model and Organika are the two largest models (see
+DEPLOYMENT.md's memory-budget section), and on memory-constrained free
+hosts are meant to run as their OWN separate service(s) rather than
+forcing every model into one container:
   - `health_router`: /health, always included, but only probes the
-    loaders for subsystems this deployment actually has enabled.
-  - `router`: everything "core" (image/video/playground/feedback).
+    loaders for subsystems this deployment actually has enabled -- using
+    each one's PASSIVE is_X_loaded() check (never triggers a load as a
+    side effect of merely being polled; see config.loader.is_cached).
+  - `router`: everything else "core" (image/video/playground/feedback) --
+    Organika's second-opinion is included here too if ORGANIKA_ENABLED,
+    but can be switched off independently of the rest of core (e.g. on
+    Render, to keep its memory budget to detectra-v1 alone).
   - `audio_router`: just /predict/audio.
-app/main.py reads CORE_ENABLED/AUDIO_ENABLED from the environment and
-includes routers accordingly; both default to true, so local dev and the
-existing single-container deployment behave exactly as before."""
+  - `organika_router`: just /predict/organika, a standalone endpoint for
+    deployments that serve Organika on its own (e.g. the Oracle VM,
+    alongside /predict/audio) -- the frontend calls this directly, the
+    same pattern already used for the separate audio deployment, rather
+    than one backend calling another backend over HTTP.
+app/main.py reads CORE_ENABLED/AUDIO_ENABLED/ORGANIKA_ENABLED from the
+environment and includes routers accordingly; all default to true, so
+local dev and the original single-container deployment behave exactly as
+before."""
 
 from __future__ import annotations
 
@@ -30,9 +41,11 @@ from app.schemas import (
     PredictAudioResponse,
     PredictImageResponse,
     PredictVideoResponse,
+    SecondOpinion,
 )
 from config.loader import get_settings
 from services.audio.predictor import predict_audio
+from services.detection.ensemble import ORGANIKA_ENABLED, predict_organika
 from services.detection.predictor import predict_image
 from services.feedback.collector import submit_feedback
 from services.playground.controller import generate as playground_generate
@@ -44,6 +57,7 @@ logger = logging.getLogger(__name__)
 health_router = APIRouter()
 router = APIRouter()
 audio_router = APIRouter()
+organika_router = APIRouter()
 
 # Also read directly by app/main.py to decide which routers to include.
 CORE_ENABLED = os.environ.get("ENABLE_CORE", "true").lower() == "true"
@@ -64,6 +78,12 @@ def health() -> HealthResponse:
         ensemble_loaded = is_ensemble_loaded()
         rag_loaded = is_rag_loaded()
 
+    organika_loaded = False
+    if ORGANIKA_ENABLED:
+        from services.detection.ensemble import is_organika_loaded
+
+        organika_loaded = is_organika_loaded()
+
     audio_loaded = False
     if AUDIO_ENABLED:
         from services.audio.loader import is_audio_model_loaded
@@ -75,6 +95,7 @@ def health() -> HealthResponse:
         model_loaded=model_loaded,
         runtime=settings.inference.runtime,
         ensemble_model_loaded=ensemble_loaded,
+        organika_model_loaded=organika_loaded,
         audio_model_loaded=audio_loaded,
         rag_model_loaded=rag_loaded,
     )
@@ -117,6 +138,31 @@ async def predict_audio_route(file: UploadFile = File(...)) -> PredictAudioRespo
 
     return PredictAudioResponse(
         label=result.label, confidence=result.confidence, explanation=result.explanation
+    )
+
+
+@organika_router.post("/predict/organika", response_model=SecondOpinion)
+async def predict_organika_route(file: UploadFile = File(...)) -> SecondOpinion:
+    """Standalone Organika/sdxl-detector endpoint, for deployments that
+    serve it on its own rather than bundled into /predict/image (e.g. the
+    Oracle VM) -- the frontend calls this directly alongside /predict/image
+    and merges both into one set of second opinions, same pattern as the
+    separate audio deployment."""
+    data = await file.read()
+    try:
+        image_bgr = decode_image_bytes(data)
+        opinion = predict_organika(image_bgr)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("predict_organika failed")
+        raise HTTPException(status_code=500, detail="Internal error during Organika prediction") from exc
+
+    return SecondOpinion(
+        label=opinion.label,
+        confidence=opinion.confidence,
+        model_name=opinion.model_name,
+        explanation=opinion.explanation,
     )
 
 

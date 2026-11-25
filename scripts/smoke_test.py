@@ -63,6 +63,7 @@ def main() -> None:
     health_body = health.json()
     check("health reports model_loaded=True", health_body.get("model_loaded") is True)
     check("health reports ensemble_model_loaded=True", health_body.get("ensemble_model_loaded") is True)
+    check("health reports organika_model_loaded=True", health_body.get("organika_model_loaded") is True)
     check("health reports audio_model_loaded=True", health_body.get("audio_model_loaded") is True)
     check("health reports rag_model_loaded=True", health_body.get("rag_model_loaded") is True)
 
@@ -75,7 +76,7 @@ def main() -> None:
     check("POST /predict/image returns 200", image_resp.status_code == 200)
     body = image_resp.json()
     check("predict/image has gradcam", len(body.get("gradcam", "")) > 0)
-    check("predict/image has second_opinion", body.get("second_opinion") is not None)
+    check("predict/image has second_opinions", len(body.get("second_opinions") or []) == 2)
 
     audio_resp = requests.post(
         f"{BASE_URL}/predict/audio",

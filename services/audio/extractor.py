@@ -1,9 +1,10 @@
 """Decode uploaded audio bytes into a 16kHz mono float32 waveform.
 
-Handles WAV/FLAC/OGG directly via soundfile (libsndfile), with no ffmpeg
-dependency -- extracting audio from a video container would need the
-ffmpeg binary as a separate system-level install, which this module
-deliberately does not assume.
+Handles WAV/FLAC/OGG/MP3 directly via soundfile (libsndfile 1.1.0+ added
+read-only MP3 decoding, confirmed present via sf.available_formats() on
+the installed wheel) -- no ffmpeg dependency. Extracting audio from a
+video container would need the ffmpeg binary as a separate system-level
+install, which this module deliberately does not assume.
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ def decode_audio_bytes(data: bytes, target_sample_rate: int) -> np.ndarray:
     except Exception as exc:
         raise ValueError(
             "Could not decode audio bytes (unsupported or corrupt format; "
-            "try WAV, FLAC, or OGG)"
+            "try WAV, FLAC, OGG, or MP3)"
         ) from exc
 
     mono = waveform.mean(axis=1)

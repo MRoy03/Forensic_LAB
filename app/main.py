@@ -1,14 +1,18 @@
 """FastAPI application entry point.
 
-Which feature set this process actually serves is controlled by two
-environment variables, both defaulting to on so local dev and the original
+Which feature set this process actually serves is controlled by three
+environment variables, all defaulting to on so local dev and the original
 single-container deployment are unaffected:
-  - ENABLE_CORE=false  -- skip image/video/playground/feedback entirely
-  - ENABLE_AUDIO=false -- skip /predict/audio (and never load its model)
-Lets the audio model (by far the largest -- see DEPLOYMENT.md) run as its
-own separate deployment on memory-constrained free hosts, instead of every
-model being forced into one container. See app/routes.py for the router
-split this reads."""
+  - ENABLE_CORE=false     -- skip image/video/playground/feedback entirely
+  - ENABLE_AUDIO=false    -- skip /predict/audio (and never load its model)
+  - ENABLE_ORGANIKA=false -- skip Organika's second opinion (both the
+    standalone /predict/organika route and, independently, whether
+    /predict/image includes it) -- e.g. off on Render (keeping its budget
+    to detectra-v1 alone) but on alongside audio on the Oracle VM.
+Lets the two largest models (audio, Organika -- see DEPLOYMENT.md) each run
+as their own separate deployment on memory-constrained free hosts, instead
+of every model being forced into one container. See app/routes.py for the
+router split this reads."""
 
 from __future__ import annotations
 
@@ -20,7 +24,15 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.routes import AUDIO_ENABLED, CORE_ENABLED, audio_router, health_router, router
+from app.routes import (
+    AUDIO_ENABLED,
+    CORE_ENABLED,
+    ORGANIKA_ENABLED,
+    audio_router,
+    health_router,
+    organika_router,
+    router,
+)
 from config.loader import get_settings
 
 logging.basicConfig(level=logging.INFO)
@@ -59,6 +71,8 @@ if CORE_ENABLED:
     app.include_router(router)
 if AUDIO_ENABLED:
     app.include_router(audio_router)
+if ORGANIKA_ENABLED:
+    app.include_router(organika_router)
 
 
 @app.exception_handler(RequestValidationError)

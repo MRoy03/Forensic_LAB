@@ -1,13 +1,17 @@
-# Standalone audio-only service -- see DEPLOYMENT.md's "split Render
-# services" option. The audio model (~116MB quantized, still the largest
-# model in this project) is isolated into its own free Render instance so
-# it gets a full, uncontested 512MB RAM ceiling instead of competing with
-# the image/video/RAG models and Streamlit for one container's budget.
+# Standalone audio + Organika service -- see DEPLOYMENT.md's "split
+# services" option. Originally audio-only; Organika/sdxl-detector (the
+# other large model, ~91.6MB quantized) was added here too once both were
+# confirmed to fit comfortably together (measured: ~540MB combined on the
+# Oracle Always Free VM this actually runs on, well under its ~952MB RAM).
+# Isolating both out of the "core" deployment keeps that one's RAM budget
+# to the primary model + detectra-v1 + RAG, uncontested.
 #
 # No Streamlit here -- that stays in the "core" deployment (built from the
-# root Dockerfile with ENABLE_AUDIO=false set as an env var). This image
-# just runs uvicorn directly with ENABLE_CORE=false / ENABLE_AUDIO=true,
-# so app/main.py only registers /health and /predict/audio.
+# root Dockerfile with ENABLE_AUDIO=false / ENABLE_ORGANIKA=false set as
+# env vars there). This image just runs uvicorn directly with
+# ENABLE_CORE=false / ENABLE_AUDIO=true / ENABLE_ORGANIKA=true, so
+# app/main.py registers /health, /predict/audio, and /predict/organika --
+# not /predict/image, /predict/video, /playground, or /feedback.
 #
 # Reuses the full requirements.txt rather than a trimmed one: the routers
 # in app/routes.py are all imported at module level regardless of which
@@ -32,6 +36,7 @@ COPY . .
 
 ENV ENABLE_CORE=false
 ENV ENABLE_AUDIO=true
+ENV ENABLE_ORGANIKA=true
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 7860
