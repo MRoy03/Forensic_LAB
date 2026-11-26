@@ -34,7 +34,13 @@ def get_rag_session() -> ort.InferenceSession:
             "onnx-community/all-MiniLM-L6-v2-ONNX's model.onnx (and its "
             "external-data sidecar, named model.onnx_data) and place it there."
         )
-    session = ort.InferenceSession(str(path), providers=[settings.inference.execution_provider])
+    # enable_cpu_mem_arena=False -- see services/detection/ensemble.py's
+    # _no_arena_session_options() for why this is applied everywhere.
+    sess_options = ort.SessionOptions()
+    sess_options.enable_cpu_mem_arena = False
+    session = ort.InferenceSession(
+        str(path), sess_options=sess_options, providers=[settings.inference.execution_provider]
+    )
     logger.info("Loaded RAG embedder ONNX model from %s", path)
     return session
 

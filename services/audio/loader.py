@@ -22,7 +22,19 @@ def get_audio_session() -> ort.InferenceSession:
             f"No audio ONNX model found at {path}. Download "
             "ai8shiro/deepfake-audio-wav2vec2-ONNX's model.onnx and place it there."
         )
-    session = ort.InferenceSession(str(path), providers=[settings.inference.execution_provider])
+    # enable_cpu_mem_arena=False: confirmed via the Oracle VM's own kernel
+    # OOM-killer logs that onnxruntime's default memory arena grows to fit
+    # the largest input seen so far and never releases it back -- three
+    # real OOM kills there (518MB -> 570MB -> 641MB RSS, climbing) on a
+    # process that measured a stable ~350MB under light single-request
+    # testing. Variable-length audio input makes this the worst-affected
+    # model in the project. Costs a little speed (plain malloc/free per
+    # allocation instead of a reused arena) for bounded, predictable memory.
+    sess_options = ort.SessionOptions()
+    sess_options.enable_cpu_mem_arena = False
+    session = ort.InferenceSession(
+        str(path), sess_options=sess_options, providers=[settings.inference.execution_provider]
+    )
     logger.info("Loaded audio ONNX model from %s", path)
     return session
 

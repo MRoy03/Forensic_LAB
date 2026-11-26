@@ -27,7 +27,17 @@ def build_session(onnx_path: str | Path | None = None) -> ort.InferenceSession:
             "to produce one, or export a trained model from the Colab notebooks."
         )
 
-    session = ort.InferenceSession(str(path), providers=[settings.inference.execution_provider])
+    # enable_cpu_mem_arena=False: onnxruntime's default memory arena grows
+    # to fit the largest input seen so far and never releases it back --
+    # confirmed via real kernel OOM-killer logs on the Oracle VM. Applied
+    # to every model loader in the project for consistency, not just the
+    # one that actually crashed -- see services/detection/ensemble.py's
+    # _no_arena_session_options() for the full rationale.
+    sess_options = ort.SessionOptions()
+    sess_options.enable_cpu_mem_arena = False
+    session = ort.InferenceSession(
+        str(path), sess_options=sess_options, providers=[settings.inference.execution_provider]
+    )
     logger.info("Loaded ONNX model from %s with providers=%s", path, session.get_providers())
     return session
 

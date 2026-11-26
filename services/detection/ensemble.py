@@ -43,6 +43,21 @@ logger = logging.getLogger(__name__)
 ORGANIKA_ENABLED = os.environ.get("ENABLE_ORGANIKA", "true").lower() == "true"
 
 
+def _no_arena_session_options() -> ort.SessionOptions:
+    """enable_cpu_mem_arena=False: onnxruntime's default memory arena grows
+    to fit the largest input seen so far and never releases it back --
+    confirmed via real kernel OOM-killer logs on the Oracle VM (climbing
+    RSS across repeated kills on the audio model specifically, the
+    worst-affected due to variable-length input). Applied everywhere for
+    consistency/safety, not just there -- costs a little speed (plain
+    malloc/free per allocation instead of a reused arena) for bounded,
+    predictable memory on every memory-constrained free host this project
+    runs on."""
+    sess_options = ort.SessionOptions()
+    sess_options.enable_cpu_mem_arena = False
+    return sess_options
+
+
 @lru_cache
 def get_ensemble_session() -> ort.InferenceSession:
     settings = get_settings()
@@ -52,7 +67,9 @@ def get_ensemble_session() -> ort.InferenceSession:
             f"No ensemble ONNX model found at {path}. Download "
             "TensorFold/detectra-v1's model.onnx and place it there."
         )
-    session = ort.InferenceSession(str(path), providers=[settings.inference.execution_provider])
+    session = ort.InferenceSession(
+        str(path), sess_options=_no_arena_session_options(), providers=[settings.inference.execution_provider]
+    )
     logger.info("Loaded ensemble ONNX model from %s", path)
     return session
 
@@ -148,7 +165,9 @@ def get_organika_session() -> ort.InferenceSession:
             "scripts/convert_organika_to_onnx.py to produce one from "
             "models/pending/organika_sdxl_detector.safetensors."
         )
-    session = ort.InferenceSession(str(path), providers=[get_settings().inference.execution_provider])
+    session = ort.InferenceSession(
+        str(path), sess_options=_no_arena_session_options(), providers=[get_settings().inference.execution_provider]
+    )
     logger.info("Loaded Organika ONNX model from %s", path)
     return session
 
